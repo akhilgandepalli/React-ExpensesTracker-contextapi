@@ -29,10 +29,10 @@ const AddTransaction = () => {
             <label htmlFor="amount">Amount</label>
             <input 
             id='amount' 
-            type="number"
+            type="text"
             name='amount' 
             onChange={inputsUpdater}
-            value={parseInt(inputs.amount)}
+            value={inputs.amount}
             placeholder='Enter Amount...'/>
             <button type='submit'>Add Transaction</button>
         </form>
