@@ -1,47 +1,78 @@
-import React, { createContext, useReducer } from 'react'
+import React, { createContext, useEffect, useReducer } from 'react'
 
-export const initialState = {
-    transactions:[
-        {id:1,name:'Salary',amount:10000},
-        {id:2,name:'Biryani',amount:-1000},
-        {id:3,name:'Groceries',amount:-5000},
-        {id:4,name:'Clothes',amount:-3000},
-        {id:5,name:'Gift',amount:3000}
-    ]
-}
-export const appReducer = (state,action)=>{
-    switch(action.type){
-        case 'DELETE_TRANSACTION':
-            return {
-                ...state,
-                transactions: state.transactions.filter((item)=>(item.id !== action.payload))
-            }
-        case 'ADD_TRANSACTION':
-            return {
-                ...state,
-                transactions: [...state.transactions,action.payload]
-            }
-        default:
-            state;
-    }
-}
-export const globalContext = createContext(initialState);
+export const STORAGE_KEY = 'expense-tracker-data'
 
-export const GlobalContextProvider = ({children}) => {
-    const[globalState,dispatch] = useReducer(appReducer,initialState);
-    const deleteTransaction = (id) =>{
-        dispatch({type:'DELETE_TRANSACTION', payload:id})
+const emptyState = {
+  transactions: [],
+}
+
+const loadState = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return emptyState
+    const parsed = JSON.parse(saved)
+    if (Array.isArray(parsed)) {
+      return { transactions: parsed }
     }
-    const addTransaction = (transaction) =>{
-        dispatch({type:'ADD_TRANSACTION', payload:transaction})
+    if (parsed && Array.isArray(parsed.transactions)) {
+      return { transactions: parsed.transactions }
     }
+  } catch {
+    // Ignore malformed storage and start fresh
+  }
+  return emptyState
+}
+
+export const appReducer = (state, action) => {
+  switch (action.type) {
+    case 'DELETE_TRANSACTION':
+      return {
+        ...state,
+        transactions: state.transactions.filter((item) => item.id !== action.payload),
+      }
+    case 'ADD_TRANSACTION':
+      return {
+        ...state,
+        transactions: [action.payload, ...state.transactions],
+      }
+    case 'RESET':
+      return emptyState
+    default:
+      return state
+  }
+}
+
+export const globalContext = createContext(emptyState)
+
+export const GlobalContextProvider = ({ children }) => {
+  const [globalState, dispatch] = useReducer(appReducer, undefined, loadState)
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(globalState.transactions))
+  }, [globalState.transactions])
+
+  const deleteTransaction = (id) => {
+    dispatch({ type: 'DELETE_TRANSACTION', payload: id })
+  }
+
+  const addTransaction = (transaction) => {
+    dispatch({ type: 'ADD_TRANSACTION', payload: transaction })
+  }
+
+  const resetTransactions = () => {
+    dispatch({ type: 'RESET' })
+  }
+
   return (
-    <>
-    <globalContext.Provider value={{
-        transactions:globalState.transactions,deleteTransaction,addTransaction
-        }}>
-        {children}
+    <globalContext.Provider
+      value={{
+        transactions: globalState.transactions,
+        deleteTransaction,
+        addTransaction,
+        resetTransactions,
+      }}
+    >
+      {children}
     </globalContext.Provider>
-    </>
   )
 }
